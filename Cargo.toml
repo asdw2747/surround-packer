@@ -1,0 +1,48 @@
+[package]
+name = "surround-packer"
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+description = "Drag-and-drop 5.1/7.1 surround stem router for UVR5 audio with native 24-bit WAV/FLAC, AC3/E-AC3/DTS export, and Audio-DVD authoring."
+repository = "https://github.com/asdw2747/surround-packer"
+homepage = "https://github.com/asdw2747/surround-packer"
+readme = "README.md"
+keywords = ["audio", "surround", "5.1", "7.1", "uvr5"]
+categories = ["multimedia::audio", "gui"]
+
+[lib]
+name = "surround_packer"
+path = "src/lib.rs"
+
+[[bin]]
+name = "surround-packer"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+cpal = "0.18"
+eframe = { version = "0.37", default-features = false, features = ["glow", "default_fonts", "x11"] }
+egui = "0.37"
+flacenc = "0.5"
+image = { version = "0.25", default-features = false, features = ["png"] }
+rfd = { version = "0.18", default-features = false, features = ["xdg-portal"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+symphonia = { version = "0.5", default-features = false, features = [
+    "flac",
+    "mp3",
+    "ogg",
+    "pcm",
+    "vorbis",
+    "wav",
+] }
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+codegen-units = 1

@@ -1,0 +1,27 @@
+# Rust build output
+/target
+
+# OS / editor / runtime noise
+.DS_Store
+*.log
+
+# Generated audio, video, and disc images. Never commit user media.
+*.iso
+*.mpg
+*.m2v
+*.vob
+*.ac3
+*.eac3
+*.dts
+*.mka
+*.wav
+*.flac
+*.cue
+*.bin
+
+# Generated Audio-DVD workspaces
+Audio-DVD/
+
+# Temporary test/output artifacts
+*.tmp
+*.tmp.*
