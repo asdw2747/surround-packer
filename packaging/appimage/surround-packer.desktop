@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=SurroundPacker
+Comment=5.1/7.1 surround stem router and Audio-DVD builder
+Exec=surround-packer
+Icon=surround-packer
+Categories=AudioVideo;Audio;AudioVideoEditing;
+Terminal=false
+StartupWMClass=surround-packer
+X-AppImage-Version=1.0.0

@@ -115,6 +115,23 @@ target/x86_64-pc-windows-msvc/release/surround-packer.exe
 
 `cargo-xwin` downloads the Microsoft CRT/SDK headers and libraries and links with `lld-link`; no Visual Studio installation is required.
 
+### Linux AppImage
+
+Install `appimagetool`, then build the AppImage from the release binary:
+
+```bash
+cargo build --release
+./scripts/build-appimage.sh
+```
+
+The result is:
+
+```text
+dist/SurroundPacker-1.0.0-x86_64.AppImage
+```
+
+The AppImage bundles the executable, icon, desktop entry, license, and third-party notices. It requires the glibc version of the build host (2.43 or newer for the current CachyOS-built release); external media tools such as `ffmpeg`, `mplex`, `dvdauthor`, and an ISO tool remain system dependencies.
+
 ## Usage
 
 1. **Choose 5.1 or 7.1** in the Channel Layout control.

@@ -19,6 +19,10 @@
 *.cue
 *.bin
 
+# Packaged release artifacts
+*.AppImage
+/dist/
+
 # Generated Audio-DVD workspaces
 Audio-DVD/
 
