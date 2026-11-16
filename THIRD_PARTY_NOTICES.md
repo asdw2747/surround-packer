@@ -1,10 +1,10 @@
 # Third-Party Notices
 
-**SurroundPacker 1.0.0** is licensed under the MIT License. See [`LICENSE`](LICENSE).
+**SurroundPacker 1.0.1** is licensed under the MIT License. See [`LICENSE`](LICENSE).
 
 SurroundPacker bundles Rust crates and fonts in the application binary, and invokes optional external media tools as separate programs. The notices below identify those components and their licenses. Full license texts are in [`LICENSES/`](LICENSES/).
 
-This table was generated from the resolved dependency graph in `Cargo.lock` (313 packages). Where a crate offers a choice of licenses, SurroundPacker relies on the permissive option unless a component is specifically noted below.
+This table was generated from the resolved dependency graph in `Cargo.lock` (298 packages). Where a crate offers a choice of licenses, SurroundPacker relies on the permissive option unless a component is specifically noted below.
 
 ## Rust crates
 
@@ -26,14 +26,11 @@ This table was generated from the resolved dependency graph in `Cargo.lock` (313
 | `bit-vec` | 0.9.1 | Apache-2.0 OR MIT |  |
 | `bitflags` | 1.3.2 | MIT/Apache-2.0 |  |
 | `bitflags` | 2.13.2 | MIT OR Apache-2.0 |  |
-| `block-buffer` | 0.10.4 | MIT OR Apache-2.0 |  |
 | `block2` | 0.5.1 | MIT |  |
 | `block2` | 0.6.2 | MIT |  |
-| `built` | 0.7.7 | MIT |  |
 | `bumpalo` | 3.20.4 | MIT OR Apache-2.0 |  |
 | `bytemuck` | 1.25.2 | Zlib OR Apache-2.0 OR MIT |  |
 | `bytemuck_derive` | 1.12.1 | Zlib OR Apache-2.0 OR MIT |  |
-| `byteorder` | 1.5.0 | Unlicense OR MIT |  |
 | `byteorder-lite` | 0.1.0 | Unlicense OR MIT |  |
 | `bytes` | 1.12.1 | MIT |  |
 | `calloop` | 0.13.0 | MIT |  |
@@ -52,16 +49,11 @@ This table was generated from the resolved dependency graph in `Cargo.lock` (313
 | `core_detect` | 1.0.0 | MIT/Apache-2.0 |  |
 | `coreaudio-rs` | 0.14.2 | MIT/Apache-2.0 |  |
 | `cpal` | 0.18.2 | Apache-2.0 | yes |
-| `crc` | 3.4.0 | MIT OR Apache-2.0 |  |
-| `crc-catalog` | 2.5.0 | MIT OR Apache-2.0 |  |
 | `crc32fast` | 1.5.5 | MIT OR Apache-2.0 |  |
-| `crossbeam-channel` | 0.5.17 | MIT OR Apache-2.0 |  |
 | `crossbeam-utils` | 0.8.23 | MIT OR Apache-2.0 |  |
 | `crunchy` | 0.2.4 | MIT |  |
-| `crypto-common` | 0.1.7 | MIT OR Apache-2.0 |  |
 | `cursor-icon` | 1.2.0 | MIT OR Apache-2.0 OR Zlib |  |
 | `dasp_sample` | 0.11.0 | MIT OR Apache-2.0 |  |
-| `digest` | 0.10.7 | MIT OR Apache-2.0 |  |
 | `dispatch` | 0.2.0 | MIT |  |
 | `dispatch2` | 0.3.1 | Zlib OR Apache-2.0 OR MIT |  |
 | `dlib` | 0.5.3 | MIT |  |
@@ -86,7 +78,6 @@ This table was generated from the resolved dependency graph in `Cargo.lock` (313
 | `fdeflate` | 0.3.7 | MIT OR Apache-2.0 |  |
 | `fearless_simd` | 0.4.1 | Apache-2.0 OR MIT |  |
 | `find-msvc-tools` | 0.1.15 | MIT OR Apache-2.0 |  |
-| `flacenc` | 0.5.1 | Apache-2.0 | yes |
 | `flate2` | 1.1.11 | MIT OR Apache-2.0 |  |
 | `foldhash` | 0.2.0 | Zlib |  |
 | `font-types` | 0.12.7 | MIT OR Apache-2.0 |  |
@@ -96,7 +87,6 @@ This table was generated from the resolved dependency graph in `Cargo.lock` (313
 | `futures-core` | 0.3.34 | MIT OR Apache-2.0 |  |
 | `futures-task` | 0.3.34 | MIT OR Apache-2.0 |  |
 | `futures-util` | 0.3.34 | MIT OR Apache-2.0 |  |
-| `generic-array` | 0.14.7 | MIT |  |
 | `gethostname` | 1.1.0 | Apache-2.0 |  |
 | `getrandom` | 0.4.3 | MIT OR Apache-2.0 |  |
 | `gl_generator` | 0.14.0 | Apache-2.0 |  |
@@ -110,9 +100,7 @@ This table was generated from the resolved dependency graph in `Cargo.lock` (313
 | `guillotiere` | 0.7.0 | MIT/Apache-2.0 |  |
 | `half` | 2.7.1 | MIT OR Apache-2.0 |  |
 | `harfrust` | 0.12.0 | MIT |  |
-| `hash32` | 0.3.1 | MIT OR Apache-2.0 |  |
 | `hashbrown` | 0.17.1 | MIT OR Apache-2.0 |  |
-| `heapless` | 0.8.0 | MIT OR Apache-2.0 |  |
 | `hermit-abi` | 0.5.3 | MIT OR Apache-2.0 |  |
 | `image` | 0.25.10 | MIT OR Apache-2.0 | yes |
 | `indexmap` | 2.14.2 | Apache-2.0 OR MIT |  |
@@ -129,6 +117,7 @@ This table was generated from the resolved dependency graph in `Cargo.lock` (313
 | `kurbo` | 0.13.1 | Apache-2.0 OR MIT |  |
 | `lazy_static` | 1.5.1 | MIT OR Apache-2.0 |  |
 | `libc` | 0.2.191 | MIT OR Apache-2.0 |  |
+| `libflac-rs` | 0.143.1 | BSD-3-Clause | yes |
 | `libloading` | 0.8.9 | ISC |  |
 | `libm` | 0.2.16 | MIT |  |
 | `libredox` | 0.1.25 | MIT |  |
@@ -139,7 +128,6 @@ This table was generated from the resolved dependency graph in `Cargo.lock` (313
 | `lock_api` | 0.4.14 | MIT OR Apache-2.0 |  |
 | `log` | 0.4.35 | MIT OR Apache-2.0 |  |
 | `mach2` | 0.6.0 | BSD-2-Clause OR MIT OR Apache-2.0 |  |
-| `md-5` | 0.10.6 | MIT OR Apache-2.0 |  |
 | `memchr` | 2.8.3 | Unlicense OR MIT |  |
 | `miniz_oxide` | 0.8.9 | MIT OR Zlib OR Apache-2.0 |  |
 | `miniz_oxide` | 0.9.1 | MIT OR Zlib OR Apache-2.0 |  |
@@ -223,7 +211,6 @@ This table was generated from the resolved dependency graph in `Cargo.lock` (313
 | `self_cell` | 1.3.0 | Apache-2.0 OR GPL-2.0-only |  |
 | `semver` | 1.0.28 | MIT OR Apache-2.0 |  |
 | `send_wrapper` | 0.6.0 | MIT/Apache-2.0 |  |
-| `seq-macro` | 0.3.6 | MIT OR Apache-2.0 |  |
 | `serde` | 1.0.229 | MIT OR Apache-2.0 | yes |
 | `serde_core` | 1.0.229 | MIT OR Apache-2.0 |  |
 | `serde_derive` | 1.0.229 | MIT OR Apache-2.0 |  |
@@ -237,7 +224,6 @@ This table was generated from the resolved dependency graph in `Cargo.lock` (313
 | `slotmap` | 1.1.1 | Zlib |  |
 | `smallvec` | 1.16.5 | MIT OR Apache-2.0 |  |
 | `smol_str` | 0.2.2 | MIT OR Apache-2.0 |  |
-| `stable_deref_trait` | 1.2.1 | MIT OR Apache-2.0 |  |
 | `static_assertions` | 1.1.0 | MIT OR Apache-2.0 |  |
 | `symphonia` | 0.5.5 | MPL-2.0 | yes |
 | `symphonia-bundle-flac` | 0.5.5 | MPL-2.0 |  |
@@ -263,7 +249,6 @@ This table was generated from the resolved dependency graph in `Cargo.lock` (313
 | `tracing` | 0.1.44 | MIT |  |
 | `tracing-core` | 0.1.36 | MIT |  |
 | `type-map` | 0.5.1 | MIT/Apache-2.0 |  |
-| `typenum` | 1.20.1 | MIT OR Apache-2.0 |  |
 | `unicode-general-category` | 1.1.0 | Apache-2.0 |  |
 | `unicode-ident` | 1.0.27 | (MIT OR Apache-2.0) AND Unicode-3.0 |  |
 | `unicode-properties` | 0.1.5 | (MIT OR Apache-2.0) AND Unicode-3.0 |  |
@@ -330,6 +315,7 @@ This table was generated from the resolved dependency graph in `Cargo.lock` (313
 - `r-efi` is offered under `MIT OR Apache-2.0 OR LGPL-2.1-or-later`; SurroundPacker uses the **MIT/Apache-2.0** options.
 - **Symphonia** (`symphonia` and its `symphonia-*` crates) is licensed under **MPL-2.0**. The source for those crates is available from crates.io and the Symphonia repository. SurroundPacker does not modify them.
 - `encoding_rs` includes BSD-3-Clause (WHATWG) code; the BSD-3-Clause text is included in `LICENSES/BSD-3-Clause.txt`.
+- **`libflac-rs`** is a pure-Rust, bit-exact port of libFLAC 1.4.3 and is licensed under **BSD-3-Clause**; its full notice is in `LICENSES/libflac-rs-BSD-3-Clause.txt`.
 - `unicode-ident` and `unicode-properties` include Unicode-3.0 data; the Unicode license text is included in `LICENSES/Unicode-3.0.txt`.
 - The Rust standard library is distributed under `MIT OR Apache-2.0`. The Windows build statically links the Microsoft C runtime under the Microsoft Visual Studio license terms.
 
@@ -378,5 +364,6 @@ The following texts are included in `LICENSES/`:
 - `LICENSES/Unlicense.txt`
 - `LICENSES/Zlib.txt`
 - `LICENSES/emoji-icon-font-MIT.txt`
+- `LICENSES/libflac-rs-BSD-3-Clause.txt`
 
 For any license not reproduced here, the SPDX identifier above refers to the standard license text published by SPDX and the corresponding upstream package.

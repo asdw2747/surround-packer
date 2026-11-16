@@ -127,7 +127,7 @@ cargo build --release
 The result is:
 
 ```text
-dist/SurroundPacker-1.0.0-x86_64.AppImage
+dist/SurroundPacker-1.0.1-x86_64.AppImage
 ```
 
 The AppImage bundles the executable, icon, desktop entry, license, and third-party notices. It requires the glibc version of the build host (2.43 or newer for the current CachyOS-built release); external media tools such as `ffmpeg`, `mplex`, `dvdauthor`, and an ISO tool remain system dependencies.
@@ -199,7 +199,7 @@ WAVEFORMATEXTENSIBLE_CHANNEL_MASK=0x063F   # 7.1
 ARTIST=...
 TITLE=...
 ALBUM=...
-ENCODER=SurroundPacker 1.0.0
+ENCODER=SurroundPacker 1.0.1
 ```
 
 The mask comment is the standard FLAC convention for signaling the 5.1 speaker layout because FLAC's stream header has no channel-mask field.
@@ -286,6 +286,8 @@ The test suite covers:
 - mono-sum `-3 dB` / `-6 dB` scaling, limiter ceiling, and template JSON round-trips
 - per-slot noise-gate defaults (`-32 dB` / `250 ms`), threshold and release behavior, activity reporting, render integration, and template persistence
 - native WAV/FLAC round-trips and real ffmpeg codec output with `ffprobe` when available
+- 24-bit 5.1 FLAC compression below 8 MB for a 10-second file, with bit-exact decode and audio-MD5 verification
+- noise-to-silence FLAC transition blocks, covering the upstream encoder overflow regression
 
 The integration test skips ffmpeg-specific assertions automatically when `ffmpeg` is not installed.
 

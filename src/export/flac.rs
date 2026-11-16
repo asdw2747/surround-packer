@@ -1,13 +1,13 @@
 use std::path::Path;
 
 use anyhow::{bail, Context, Result};
-use flacenc::bitsink::ByteSink;
-use flacenc::component::{BitRepr, MetadataBlockData};
-use flacenc::config;
-use flacenc::error::Verify;
-use flacenc::source::MemSource;
+use libflac_rs::{Encoder, EncoderConfig};
 
 use crate::model::ChannelLayout;
+
+/// libFLAC compression level 5 balances size and speed for 24-bit multichannel.
+const FLAC_COMPRESSION_LEVEL: u32 = 5;
+const FLAC_BLOCK_SIZE: u32 = 4_096;
 
 pub const FLAC_CHANNEL_MASK_COMMENT: &str = "WAVEFORMATEXTENSIBLE_CHANNEL_MASK=0x003F";
 pub const FLAC_7_1_CHANNEL_MASK_COMMENT: &str = "WAVEFORMATEXTENSIBLE_CHANNEL_MASK=0x063F";
@@ -113,30 +113,69 @@ where
     }
     progress(0.2);
 
-    let mut encoder = config::Encoder::default();
-    encoder.block_size = 4_096;
-    encoder.multithread = true;
-    let encoder = encoder
-        .into_verified()
-        .map_err(|error| anyhow::anyhow!("invalid FLAC encoder configuration: {error:?}"))?;
-
-    let source = MemSource::from_samples(&interleaved, layout.count(), 24, sample_rate as usize);
-    let mut stream = flacenc::encode_with_fixed_block_size(&encoder, source, encoder.block_size)
-        .map_err(|error| anyhow::anyhow!("FLAC encoding failed: {error:?}"))?;
+    let encoder = Encoder::new(
+        EncoderConfig::new(layout.count() as u32, 24, sample_rate)
+            .with_block_size(FLAC_BLOCK_SIZE)
+            .with_compression_level(FLAC_COMPRESSION_LEVEL)
+            .with_md5(true),
+    );
+    let stream = encoder.encode(&interleaved);
     progress(0.85);
 
-    stream.add_metadata_block(
-        MetadataBlockData::new_unknown(4, &vorbis_comment_payload(tags, layout))
-            .map_err(|error| anyhow::anyhow!("failed to add FLAC metadata: {error:?}"))?,
-    );
-
-    let mut sink = ByteSink::new();
-    stream
-        .write(&mut sink)
-        .map_err(|error| anyhow::anyhow!("FLAC stream serialization failed: {error:?}"))?;
-    std::fs::write(path, sink.as_slice()).with_context(|| format!("write {}", path.display()))?;
+    // libFLAC's default Vorbis block only carries a vendor string. Replace it
+    // with the channel mask and user tags while leaving STREAMINFO and frames
+    // untouched, including the audio MD5.
+    let payload = vorbis_comment_payload(tags, layout);
+    let stream = replace_vorbis_comment(stream, &payload)?;
+    std::fs::write(path, stream).with_context(|| format!("write {}", path.display()))?;
     progress(1.0);
     Ok(())
+}
+
+/// Replace the first VORBIS_COMMENT block while preserving all other metadata
+/// and the audio frames.
+fn replace_vorbis_comment(stream: Vec<u8>, payload: &[u8]) -> Result<Vec<u8>> {
+    if stream.len() < 4 || &stream[..4] != b"fLaC" {
+        bail!("FLAC encoder did not produce a valid stream");
+    }
+    if payload.len() > 0x00FF_FFFF {
+        bail!("FLAC Vorbis comment block is too large");
+    }
+
+    let mut offset = 4usize;
+    let mut metadata: Vec<(u8, Vec<u8>)> = Vec::new();
+    let mut last = false;
+    while !last {
+        if offset + 4 > stream.len() {
+            bail!("truncated FLAC metadata");
+        }
+        let header = stream[offset];
+        last = header & 0x80 != 0;
+        let block_type = header & 0x7F;
+        let length = ((stream[offset + 1] as usize) << 16)
+            | ((stream[offset + 2] as usize) << 8)
+            | stream[offset + 3] as usize;
+        offset += 4;
+        if offset + length > stream.len() {
+            bail!("truncated FLAC metadata block");
+        }
+        metadata.push((block_type, stream[offset..offset + length].to_vec()));
+        offset += length;
+    }
+    let audio = &stream[offset..];
+
+    let mut output = Vec::with_capacity(stream.len() + payload.len() + 4);
+    output.extend_from_slice(b"fLaC");
+    for (block_type, data) in metadata.iter().filter(|(block_type, _)| *block_type != 4) {
+        output.push(*block_type);
+        output.extend_from_slice(&(data.len() as u32).to_be_bytes()[1..]);
+        output.extend_from_slice(data);
+    }
+    output.push(0x80 | 4);
+    output.extend_from_slice(&(payload.len() as u32).to_be_bytes()[1..]);
+    output.extend_from_slice(payload);
+    output.extend_from_slice(audio);
+    Ok(output)
 }
 
 /// Parse Vorbis comments from a FLAC file. Exposed for tests and diagnostics.
@@ -215,6 +254,117 @@ mod tests {
         assert!(text.contains("TITLE=Test Title"));
         assert!(text.contains("ALBUM=Test Album"));
         assert!(text.contains("ENCODER=SurroundPacker"));
+    }
+
+    fn test_signal_seconds(seconds: f32) -> Vec<Vec<f32>> {
+        let frames = (48_000.0 * seconds) as usize;
+        let frequencies = [220.0, 277.18, 329.63, 55.0, 440.0, 523.25];
+        frequencies
+            .iter()
+            .map(|frequency| {
+                (0..frames)
+                    .map(|frame| {
+                        let t = frame as f32 / 48_000.0;
+                        let fundamental = 0.2 * (2.0 * std::f32::consts::PI * frequency * t).sin();
+                        let harmonic =
+                            0.05 * (2.0 * std::f32::consts::PI * frequency * 2.0 * t).sin();
+                        fundamental + harmonic
+                    })
+                    .collect()
+            })
+            .collect()
+    }
+
+    fn expected_interleaved(channels: &[Vec<f32>]) -> Vec<i32> {
+        let mut expected = Vec::with_capacity(channels[0].len() * channels.len());
+        for frame in 0..channels[0].len() {
+            for channel in channels {
+                expected.push(to_pcm24(channel[frame]));
+            }
+        }
+        expected
+    }
+
+    #[test]
+    fn ten_seconds_of_24_bit_six_channel_flac_compresses_and_is_bit_exact() {
+        let channels = test_signal_seconds(10.0);
+        let expected = expected_interleaved(&channels);
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("compressed.flac");
+        write_flac24(
+            &path,
+            ChannelLayout::Surround51,
+            48_000,
+            &channels,
+            &FlacTags::default(),
+            |_| {},
+        )
+        .unwrap();
+
+        let data = std::fs::read(&path).unwrap();
+        assert!(
+            data.len() < 8_000_000,
+            "10 s 24-bit 5.1 FLAC is {} bytes; compression is not active",
+            data.len()
+        );
+        assert!(
+            data.len() < expected.len() * 3,
+            "FLAC is larger than the raw 24-bit PCM payload"
+        );
+
+        let decoded = libflac_rs::decode(&data).expect("decode FLAC");
+        assert_eq!(decoded.channels, 6);
+        assert_eq!(decoded.bits_per_sample, 24);
+        assert_eq!(decoded.sample_rate, 48_000);
+        assert_eq!(decoded.total_samples, 480_000);
+        assert!(decoded.md5_ok, "FLAC audio MD5 mismatch");
+        assert_eq!(decoded.interleaved, expected);
+
+        let comments = read_flac_comments(&data).unwrap();
+        assert!(comments
+            .iter()
+            .any(|comment| comment == FLAC_CHANNEL_MASK_COMMENT));
+    }
+
+    #[test]
+    fn noise_to_silence_transition_stays_compressed_and_lossless() {
+        let frames = 48_000usize;
+        let mut state = 123_456u32;
+        let mut channels = Vec::new();
+        for _ in 0..6 {
+            let mut channel = Vec::with_capacity(frames);
+            for frame in 0..frames {
+                if frame < frames / 2 {
+                    state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+                    channel.push(state as f32 / u32::MAX as f32 * 2.0 - 1.0);
+                } else {
+                    channel.push(0.0);
+                }
+            }
+            channels.push(channel);
+        }
+        let expected = expected_interleaved(&channels);
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("transition.flac");
+        write_flac24(
+            &path,
+            ChannelLayout::Surround51,
+            48_000,
+            &channels,
+            &FlacTags::default(),
+            |_| {},
+        )
+        .unwrap();
+
+        let data = std::fs::read(&path).unwrap();
+        assert!(
+            data.len() < 1_000_000,
+            "noise-to-silence block produced {} bytes",
+            data.len()
+        );
+        let decoded = libflac_rs::decode(&data).expect("decode FLAC");
+        assert!(decoded.md5_ok);
+        assert_eq!(decoded.interleaved, expected);
     }
 
     #[test]

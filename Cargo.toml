@@ -1,6 +1,6 @@
 [package]
 name = "surround-packer"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 rust-version = "1.85"
 license = "MIT"
@@ -24,7 +24,7 @@ anyhow = "1"
 cpal = "0.18"
 eframe = { version = "0.37", default-features = false, features = ["glow", "default_fonts", "x11"] }
 egui = "0.37"
-flacenc = "0.5"
+libflac-rs = "0.143"
 image = { version = "0.25", default-features = false, features = ["png"] }
 rfd = { version = "0.18", default-features = false, features = ["xdg-portal"] }
 serde = { version = "1", features = ["derive"] }
