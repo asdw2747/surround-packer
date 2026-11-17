@@ -251,13 +251,12 @@ impl Slot {
 pub enum StemKind {
     LeadVocals,
     Vocals,
-    BackingVocals,
+    BackgroundVocals,
     Drums,
     Bass,
     Melodic,
     Ambient,
     Other,
-    Instrumental,
     Unknown,
 }
 
@@ -266,26 +265,65 @@ impl StemKind {
         match self {
             Self::LeadVocals => "Lead Vocals",
             Self::Vocals => "Vocals",
-            Self::BackingVocals => "Backing Vocals",
+            Self::BackgroundVocals => "Background Vocals",
             Self::Drums => "Drums",
             Self::Bass => "Bass",
             Self::Melodic => "Melodic",
             Self::Ambient => "Ambient",
             Self::Other => "Other",
-            Self::Instrumental => "Instrumental",
             Self::Unknown => "Unknown",
         }
     }
 }
 
-/// Robust UVR5-style filename classification.
-pub fn classify_filename(name: &str) -> StemKind {
-    let stem = Path::new(name)
-        .file_stem()
+/// Strip only a known audio extension. `Path::file_stem` is unsafe here because
+/// song titles such as "(feat. Artist)" contain dots, and `StemRef` paths may
+/// already have had their extension removed.
+fn audio_stem(name: &str) -> &str {
+    let file = Path::new(name)
+        .file_name()
         .and_then(|value| value.to_str())
         .unwrap_or(name);
-    let normalized: String = stem
-        .chars()
+    if let Some((base, extension)) = file.rsplit_once('.') {
+        let extension = extension.to_ascii_lowercase();
+        if !base.is_empty()
+            && matches!(
+                extension.as_str(),
+                "wav"
+                    | "flac"
+                    | "mp3"
+                    | "ogg"
+                    | "oga"
+                    | "m4a"
+                    | "aac"
+                    | "aiff"
+                    | "aif"
+                    | "opus"
+                    | "wv"
+                    | "ape"
+                    | "dts"
+                    | "ac3"
+                    | "eac3"
+                    | "mka"
+            )
+        {
+            return base;
+        }
+    }
+    file
+}
+
+/// Normalize a tag or filename fragment into lowercase alphanumeric tokens.
+fn role_tokens(text: &str) -> Vec<&str> {
+    // The returned &str slices borrow from `text`; callers pass owned strings
+    // that outlive the token vector.
+    text.split(|ch: char| !ch.is_alphanumeric())
+        .filter(|token| !token.is_empty())
+        .collect()
+}
+
+fn normalize_lower(text: &str) -> String {
+    text.chars()
         .map(|ch| {
             if ch.is_ascii_alphanumeric() {
                 ch.to_ascii_lowercase()
@@ -293,25 +331,99 @@ pub fn classify_filename(name: &str) -> StemKind {
                 ' '
             }
         })
-        .collect();
-    let tokens: Vec<&str> = normalized.split_whitespace().collect();
+        .collect()
+}
 
+fn role_from_tokens(tokens: &[&str]) -> Option<StemKind> {
     let has = |candidates: &[&str]| tokens.iter().any(|token| candidates.contains(token));
 
-    let has_vocals = has(&["vocals", "vocal", "vox", "voice", "voices", "acapella"]);
-    let has_backing = has(&["backing", "background", "bgv", "bgvs"]);
-    let has_harmony = has(&["harmony", "harmonies", "choir"]);
-    if has(&["leadvocal", "leadvocals"]) || (has_vocals && has(&["lead"])) {
-        StemKind::LeadVocals
-    } else if has_harmony || (has_vocals && has_backing) {
-        StemKind::BackingVocals
-    } else if has_vocals {
-        StemKind::Vocals
+    let vocals = has(&["vocals", "vocal", "vox", "voice", "voices", "acapella"]);
+    let lead = has(&["lead"]);
+    let lead_compound = has(&["leadvocal", "leadvocals"]);
+    let background = has(&["background", "backing"]);
+    let bgv = has(&["bgv", "bgvs"]);
+    let harmony = has(&["harmony", "harmonies", "choir"]);
+
+    if (vocals && lead) || lead_compound {
+        Some(StemKind::LeadVocals)
+    } else if (vocals && background) || bgv || harmony {
+        Some(StemKind::BackgroundVocals)
+    } else if vocals {
+        Some(StemKind::Vocals)
     } else if has(&["drums", "drum", "percussion", "perc", "kick", "snare"]) {
-        StemKind::Drums
+        Some(StemKind::Drums)
     } else if has(&["bass", "sub", "subbass", "lowend"]) {
-        StemKind::Bass
-    } else if has(&[
+        Some(StemKind::Bass)
+    } else if has(&["other", "instrumental", "instrument", "inst", "karaoke"]) {
+        Some(StemKind::Other)
+    } else {
+        None
+    }
+}
+
+fn parenthesized_groups(stem: &str) -> Vec<String> {
+    let mut groups = Vec::new();
+    let mut current = String::new();
+    let mut depth = 0usize;
+    for ch in stem.chars() {
+        match ch {
+            '(' => {
+                depth += 1;
+                if depth == 1 {
+                    current.clear();
+                }
+            }
+            ')' if depth > 0 => {
+                depth -= 1;
+                if depth == 0 {
+                    groups.push(current.clone());
+                }
+            }
+            _ if depth > 0 => current.push(ch),
+            _ => {}
+        }
+    }
+    groups
+}
+
+fn trailing_role(stem: &str) -> Option<StemKind> {
+    // Prefer the last parenthesized role tag. This ignores earlier tags such as
+    // "(feat. Artist)" in song titles.
+    for group in parenthesized_groups(stem).iter().rev() {
+        let normalized = normalize_lower(group);
+        let tokens = role_tokens(&normalized);
+        if let Some(kind) = role_from_tokens(&tokens) {
+            return Some(kind);
+        }
+    }
+
+    // Otherwise accept a trailing suffix such as "Song - Lead Vocals" or
+    // "Song_lead_vocals". Only the final three tokens are considered.
+    let normalized = normalize_lower(stem);
+    let tokens = role_tokens(&normalized);
+    let start = tokens.len().saturating_sub(3);
+    role_from_tokens(&tokens[start..])
+}
+
+/// Robust UVR5-style filename classification.
+///
+/// Roles are taken from the trailing parenthesized tag (or trailing suffix),
+/// so an earlier title fragment such as "(feat. Artist)" cannot override the
+/// actual UVR5 role.
+pub fn classify_filename(name: &str) -> StemKind {
+    let stem = audio_stem(name);
+
+    if let Some(kind) = trailing_role(stem) {
+        return kind;
+    }
+
+    // Broad fallback for non-UVR5 creative stems. Role words are intentionally
+    // not considered here: they must come from the trailing tag.
+    let normalized = normalize_lower(stem);
+    let tokens = role_tokens(&normalized);
+    let has = |candidates: &[&str]| tokens.iter().any(|token| candidates.contains(token));
+
+    if has(&[
         "ambient",
         "atmos",
         "atmosphere",
@@ -336,10 +448,6 @@ pub fn classify_filename(name: &str) -> StemKind {
         "arpeggio",
     ]) {
         StemKind::Melodic
-    } else if has(&["other", "others", "fx", "effects"]) {
-        StemKind::Other
-    } else if has(&["instrumental", "instrument", "inst", "karaoke", "backing"]) {
-        StemKind::Instrumental
     } else {
         StemKind::Unknown
     }
@@ -465,12 +573,11 @@ pub fn apply_preset(
     let lead = first_of(stems, StemKind::LeadVocals);
     let combined_vocals = first_of(stems, StemKind::Vocals);
     let vocals = lead.or(combined_vocals);
-    let backing = first_of(stems, StemKind::BackingVocals);
+    let backing = first_of(stems, StemKind::BackgroundVocals);
     let drums = first_of(stems, StemKind::Drums);
     let bass = first_of(stems, StemKind::Bass);
     let melodic = first_of(stems, StemKind::Melodic).or_else(|| first_of(stems, StemKind::Other));
     let ambient = first_of(stems, StemKind::Ambient);
-    let instrumental = first_of(stems, StemKind::Instrumental);
     let unknown = first_of(stems, StemKind::Unknown);
 
     match preset {
@@ -488,8 +595,7 @@ pub fn apply_preset(
             if let Some(drums) = drums {
                 add_front(&mut slots, drums, 0.0);
             }
-            let other = first_of(stems, StemKind::Other)
-                .or_else(|| first_of(stems, StemKind::Instrumental));
+            let other = first_of(stems, StemKind::Other);
             if let Some(other) = other {
                 add_front(&mut slots, other, 0.0);
                 add_surround(&mut slots, other, -4.5);
@@ -524,9 +630,6 @@ pub fn apply_preset(
             if let Some(backing) = backing {
                 add_ambient(&mut slots, layout, backing, -6.0);
             }
-            if let Some(instrumental) = instrumental {
-                fill_remaining(&mut slots, layout, instrumental, -6.0);
-            }
             if let Some(unknown) = unknown {
                 fill_remaining(&mut slots, layout, unknown, -3.0);
             }
@@ -554,9 +657,6 @@ pub fn apply_preset(
             }
             if let Some(backing) = backing {
                 add_ambient(&mut slots, layout, backing, -6.0);
-            }
-            if let Some(instrumental) = instrumental {
-                fill_remaining(&mut slots, layout, instrumental, -6.0);
             }
             if let Some(unknown) = unknown {
                 fill_remaining(&mut slots, layout, unknown, -3.0);
@@ -721,11 +821,11 @@ mod tests {
         assert_eq!(classify_filename("Song (Other).mp3"), StemKind::Other);
         assert_eq!(
             classify_filename("Song (Instrumental).flac"),
-            StemKind::Instrumental
+            StemKind::Other
         );
         assert_eq!(
             classify_filename("Song (Backing Vocals).flac"),
-            StemKind::BackingVocals
+            StemKind::BackgroundVocals
         );
         assert_eq!(
             classify_filename("Song (Lead Vocals).flac"),
@@ -737,18 +837,45 @@ mod tests {
         );
         assert_eq!(
             classify_filename("Song (Background Vocals).flac"),
-            StemKind::BackingVocals
+            StemKind::BackgroundVocals
         );
         assert_eq!(
             classify_filename("Song (backing_vocals).flac"),
-            StemKind::BackingVocals
+            StemKind::BackgroundVocals
         );
         assert_eq!(
             classify_filename("Song (Harmony).flac"),
-            StemKind::BackingVocals
+            StemKind::BackgroundVocals
         );
         assert_eq!(classify_filename("Song (Pad).flac"), StemKind::Ambient);
         assert_eq!(classify_filename("Song (Strings).flac"), StemKind::Ambient);
+    }
+
+    #[test]
+    fn classifies_trailing_vocal_split_tags_after_title_metadata() {
+        let prefix = "1_03_Unstoppable (feat. Artist)_";
+        for (suffix, expected) in [
+            ("(Lead Vocals)", StemKind::LeadVocals),
+            ("(Background Vocals)", StemKind::BackgroundVocals),
+            ("(Vocals)", StemKind::Vocals),
+            ("(Drums)", StemKind::Drums),
+            ("(Bass)", StemKind::Bass),
+            ("(Other)", StemKind::Other),
+        ] {
+            assert_eq!(
+                classify_filename(&format!("{prefix}{suffix}.wav")),
+                expected,
+                "failed to classify {suffix}"
+            );
+        }
+        assert_eq!(
+            classify_filename("1_03_Unstoppable (feat. Artist)_lead_vocals.wav"),
+            StemKind::LeadVocals
+        );
+        assert_eq!(
+            classify_filename("1_03_Unstoppable (feat. Artist)_background_vocals.wav"),
+            StemKind::BackgroundVocals
+        );
     }
 
     fn vocal_split_stems(include_combined: bool) -> Vec<StemRef> {
@@ -818,6 +945,36 @@ mod tests {
             assert!(
                 slot.routes.iter().all(|route| route.stem_id != 6),
                 "combined Vocals stem was still routed in {}",
+                slot.channel.short()
+            );
+        }
+    }
+
+    #[test]
+    fn vocal_split_preset_handles_title_metadata_and_combined_vocals() {
+        let prefix = "1_03_Unstoppable (feat. Artist)_";
+        let stems = vec![
+            StemRef::new(1, format!("{prefix}(Lead Vocals).wav")),
+            StemRef::new(2, format!("{prefix}(Background Vocals).wav")),
+            StemRef::new(3, format!("{prefix}(Vocals).wav")),
+            StemRef::new(4, format!("{prefix}(Drums).wav")),
+            StemRef::new(5, format!("{prefix}(Bass).wav")),
+            StemRef::new(6, format!("{prefix}(Other).wav")),
+        ];
+        let slots = apply_preset(Preset::VocalSplit, &stems, ChannelLayout::Surround51);
+        assert_eq!(route_gain(&slots[Channel::Fc.index()], 1), Some(0.0));
+        assert_eq!(route_gain(&slots[Channel::Sl.index()], 2), Some(0.0));
+        assert_eq!(route_gain(&slots[Channel::Sr.index()], 2), Some(0.0));
+        assert_eq!(route_gain(&slots[Channel::Fl.index()], 4), Some(0.0));
+        assert_eq!(route_gain(&slots[Channel::Fr.index()], 4), Some(0.0));
+        assert_eq!(route_gain(&slots[Channel::Fl.index()], 6), Some(0.0));
+        assert_eq!(route_gain(&slots[Channel::Sl.index()], 6), Some(-4.5));
+        assert_eq!(route_gain(&slots[Channel::Lfe.index()], 5), Some(0.0));
+        assert!(slots[Channel::Fc.index()].gate_enabled);
+        for slot in &slots {
+            assert!(
+                slot.routes.iter().all(|route| route.stem_id != 3),
+                "combined Vocals was routed in {}",
                 slot.channel.short()
             );
         }

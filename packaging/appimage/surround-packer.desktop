@@ -7,4 +7,4 @@ Icon=surround-packer
 Categories=AudioVideo;Audio;AudioVideoEditing;
 Terminal=false
 StartupWMClass=surround-packer
-X-AppImage-Version=1.0.2
+X-AppImage-Version=1.0.3

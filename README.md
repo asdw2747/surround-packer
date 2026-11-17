@@ -29,6 +29,7 @@ Built in pure Rust with `eframe`/`egui`. Native 24-bit WAV and FLAC export need 
   - *Vocals + Drums Front / Instruments Surround*
   - *Classic Quad + Center Vocal*
 - **Automatic Vocal Split detection** on import: a complete 5/6-stem UVR5 set applies the Vocal Split preset, ignoring a redundant combined `(Vocals)` file
+- **Trailing-tag role detection** so titles containing `(feat. Artist)` or other parenthetical metadata do not override the final UVR5 role tag
 - **Routing templates** saved and loaded as human-readable `.json` files.
 - **LFE low-pass crossover** (80–120 Hz, default 100 Hz, 2nd-order Butterworth).
 - **Dual surround Haas delays** (0–35 ms):
@@ -129,7 +130,7 @@ cargo build --release
 The result is:
 
 ```text
-dist/SurroundPacker-1.0.2-x86_64.AppImage
+dist/SurroundPacker-1.0.3-x86_64.AppImage
 ```
 
 The AppImage bundles the executable, icon, desktop entry, license, and third-party notices. It requires the glibc version of the build host (2.43 or newer for the current CachyOS-built release); external media tools such as `ffmpeg`, `mplex`, `dvdauthor`, and an ISO tool remain system dependencies.
@@ -201,7 +202,7 @@ WAVEFORMATEXTENSIBLE_CHANNEL_MASK=0x063F   # 7.1
 ARTIST=...
 TITLE=...
 ALBUM=...
-ENCODER=SurroundPacker 1.0.2
+ENCODER=SurroundPacker 1.0.3
 ```
 
 The mask comment is the standard FLAC convention for signaling the 5.1 speaker layout because FLAC's stream header has no channel-mask field.

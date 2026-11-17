@@ -619,20 +619,17 @@ impl SurroundPackerApp {
             }
         }
 
+        let mut applied_pending = false;
         if self.loading == 0 {
             if let Some(preset) = self.pending_preset.take() {
                 if !self.stems.is_empty() {
                     self.apply_preset(preset);
+                    applied_pending = true;
                 }
             }
         }
 
-        if had_load_event
-            && self.loading == 0
-            && self.pending_preset.is_none()
-            && self.slots.iter().all(|slot| slot.routes.is_empty())
-            && !self.stems.is_empty()
-        {
+        if had_load_event && !applied_pending && self.loading == 0 && !self.stems.is_empty() {
             let refs: Vec<StemRef> = self
                 .stems
                 .iter()

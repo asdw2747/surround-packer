@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-**SurroundPacker 1.0.2** is licensed under the MIT License. See [`LICENSE`](LICENSE).
+**SurroundPacker 1.0.3** is licensed under the MIT License. See [`LICENSE`](LICENSE).
 
 SurroundPacker bundles Rust crates and fonts in the application binary, and invokes optional external media tools as separate programs. The notices below identify those components and their licenses. Full license texts are in [`LICENSES/`](LICENSES/).
 

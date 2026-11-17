@@ -19,6 +19,8 @@ pub const LFE_COLOR: Color32 = Color32::from_rgb(255, 171, 64);
 pub const SURROUND_COLOR: Color32 = Color32::from_rgb(160, 140, 255);
 pub const BACK_COLOR: Color32 = Color32::from_rgb(105, 170, 255);
 pub const VOCALS_COLOR: Color32 = Color32::from_rgb(255, 196, 87);
+pub const LEAD_VOCALS_COLOR: Color32 = Color32::from_rgb(255, 196, 87);
+pub const BACKGROUND_VOCALS_COLOR: Color32 = Color32::from_rgb(255, 150, 190);
 pub const DRUMS_COLOR: Color32 = Color32::from_rgb(88, 170, 255);
 pub const BASS_COLOR: Color32 = Color32::from_rgb(190, 120, 255);
 pub const MELODIC_COLOR: Color32 = Color32::from_rgb(92, 214, 140);
@@ -107,12 +109,13 @@ pub fn channel_color(channel: Channel) -> Color32 {
 
 pub fn kind_color(kind: &StemKind) -> Color32 {
     match kind {
-        StemKind::LeadVocals | StemKind::Vocals | StemKind::BackingVocals => VOCALS_COLOR,
+        StemKind::LeadVocals => LEAD_VOCALS_COLOR,
+        StemKind::Vocals => VOCALS_COLOR,
+        StemKind::BackgroundVocals => BACKGROUND_VOCALS_COLOR,
         StemKind::Drums => DRUMS_COLOR,
         StemKind::Bass => BASS_COLOR,
         StemKind::Melodic | StemKind::Other => MELODIC_COLOR,
         StemKind::Ambient => SURROUND_COLOR,
-        StemKind::Instrumental => MUTED,
         StemKind::Unknown => FAINT,
     }
 }

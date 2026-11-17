@@ -339,7 +339,7 @@ pub fn show_left(app: &mut SurroundPackerApp, ui: &mut Ui) {
                                 ui.label(
                                     RichText::new(format!(
                                         "{} · {} ch · {}",
-                                        theme::short_path(stem.kind().label(), 12),
+                                        stem.kind().label(),
                                         stem.channel_count(),
                                         duration_text(stem.duration_secs())
                                     ))

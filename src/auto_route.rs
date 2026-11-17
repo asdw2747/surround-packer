@@ -3,15 +3,16 @@ use crate::routing::{Preset, StemKind, StemRef};
 /// Detect a UVR5 Vocal Split import and return the matching preset.
 ///
 /// A split set must contain lead vocals, background vocals, drums, bass, and
-/// either an "Other" or "Instrumental" stem. A redundant combined `(Vocals)`
-/// stem may also be present; the preset intentionally leaves it unrouted.
+/// an "Other" stem (UVR5 instrumental files classify as Other). A redundant
+/// combined `(Vocals)` stem may also be present; the preset intentionally
+/// leaves it unrouted.
 pub fn vocal_split_preset(stems: &[StemRef]) -> Option<Preset> {
     let has = |kind: StemKind| stems.iter().any(|stem| stem.kind() == kind);
     (has(StemKind::LeadVocals)
-        && has(StemKind::BackingVocals)
+        && has(StemKind::BackgroundVocals)
         && has(StemKind::Drums)
         && has(StemKind::Bass)
-        && (has(StemKind::Other) || has(StemKind::Instrumental)))
+        && has(StemKind::Other))
     .then_some(Preset::VocalSplit)
 }
 
@@ -56,6 +57,20 @@ mod tests {
             "Song (Instrumental).wav",
         ]);
         assert_eq!(vocal_split_preset(&instrumental), Some(Preset::VocalSplit));
+    }
+
+    #[test]
+    fn detects_exact_title_with_feat_and_trailing_role_tags() {
+        let prefix = "1_03_Unstoppable (feat. Artist)_";
+        let six = stems(&[
+            &format!("{prefix}(Vocals).wav"),
+            &format!("{prefix}(Lead Vocals).wav"),
+            &format!("{prefix}(Background Vocals).wav"),
+            &format!("{prefix}(Drums).wav"),
+            &format!("{prefix}(Bass).wav"),
+            &format!("{prefix}(Other).wav"),
+        ]);
+        assert_eq!(vocal_split_preset(&six), Some(Preset::VocalSplit));
     }
 
     #[test]
