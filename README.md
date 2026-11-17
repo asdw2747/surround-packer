@@ -24,11 +24,11 @@ Built in pure Rust with `eframe`/`egui`. Native 24-bit WAV and FLAC export need 
 - **Layered speaker channels** so presets can combine, for example, drums and subtle vocals in the front pair.
 - **Independent per-channel gain, mute, and solo** plus per-layer trim and mute.
 - **Per-speaker noise gate** for UVR5 stem bleed, with adjustable threshold (`-60` to `-15 dB`, default `-32 dB`) and release (`50` to `600 ms`, default `250 ms`), a fast 4 ms attack, and a 150 ms hold.
-- **UVR5 filename auto-routing presets**:
+- **Quick Presets for UVR5-style stems**:
   - *5-Stem Vocal Split* (Lead Vocals → FC, Background Vocals → SL/SR, Drums → FL/FR, Other → FL/FR + SL/SR, Bass → LFE)
   - *Vocals + Drums Front / Instruments Surround*
   - *Classic Quad + Center Vocal*
-- **Automatic Vocal Split detection** on import: a complete 5/6-stem UVR5 set applies the Vocal Split preset, ignoring a redundant combined `(Vocals)` file
+- **Explicit-only routing**: loading stems classifies them for the library but leaves the speaker room empty; use a Quick Preset, **Load .json**, or drag a stem to a speaker
 - **Trailing-tag role detection** so titles containing `(feat. Artist)` or other parenthetical metadata do not override the final UVR5 role tag
 - **Routing templates** saved and loaded as human-readable `.json` files.
 - **LFE low-pass crossover** (80–120 Hz, default 100 Hz, 2nd-order Butterworth).
@@ -130,7 +130,7 @@ cargo build --release
 The result is:
 
 ```text
-dist/SurroundPacker-1.0.3-x86_64.AppImage
+dist/SurroundPacker-1.0.4-x86_64.AppImage
 ```
 
 The AppImage bundles the executable, icon, desktop entry, license, and third-party notices. It requires the glibc version of the build host (2.43 or newer for the current CachyOS-built release); external media tools such as `ffmpeg`, `mplex`, `dvdauthor`, and an ISO tool remain system dependencies.
@@ -139,7 +139,7 @@ The AppImage bundles the executable, icon, desktop entry, license, and third-par
 
 1. **Choose 5.1 or 7.1** in the Channel Layout control.
 2. **Load stems** with *Load audio stems*, or drop `.wav`, `.flac`, `.mp3`, or `.ogg` files anywhere on the app.
-3. **Route stems** by dragging a library card onto a speaker. You can also use *Route to…* on the card or the Browse control inside a speaker.
+3. **Route stems** by dragging a library card onto a speaker. You can also use *Route to…* on the card or the Browse control inside a speaker. Loading files does not route them automatically; only Quick Presets, **Load .json**, or an explicit drop onto a speaker changes the room.
 4. **Apply a preset** or build the mix manually. Dropping a stem onto a speaker that already has sources adds another layer.
 5. **Shape the mix** with LFE crossover, surround delays, pan law, and the limiter.
 6. **Analyze peaks** or let the automatic debounced analysis update the master meters.
@@ -202,7 +202,7 @@ WAVEFORMATEXTENSIBLE_CHANNEL_MASK=0x063F   # 7.1
 ARTIST=...
 TITLE=...
 ALBUM=...
-ENCODER=SurroundPacker 1.0.3
+ENCODER=SurroundPacker 1.0.4
 ```
 
 The mask comment is the standard FLAC convention for signaling the 5.1 speaker layout because FLAC's stream header has no channel-mask field.
@@ -283,7 +283,8 @@ The test suite covers:
 - LFE low-pass attenuation above 120 Hz
 - the exact 720-sample (15 ms at 48 kHz) surround delay offset
 - UVR5 filename routing for `antonymph_(Vocals).flac` and `antonymph_(Drums).flac`, including Lead/Background Vocal Split detection
-- five- and six-stem Vocal Split routing, FC gate defaults, and redundant combined-Vocals suppression
+- explicit Quick Preset routing for five- and six-stem Vocal Split sets, FC gate defaults, and redundant combined-Vocals suppression
+- load-time classification without automatic speaker routing
 - 7.1 presets: lead instruments -> SL/SR, pads/backing/strings -> BL/BR
 - stereo audition folddown, including BL/BR at `0.707`
 - Audio-DVD multi-track MPEG muxing and queue handling

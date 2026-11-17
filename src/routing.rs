@@ -951,7 +951,7 @@ mod tests {
     }
 
     #[test]
-    fn vocal_split_preset_handles_title_metadata_and_combined_vocals() {
+    fn quick_preset_vocal_split_handles_title_metadata_and_combined_vocals() {
         let prefix = "1_03_Unstoppable (feat. Artist)_";
         let stems = vec![
             StemRef::new(1, format!("{prefix}(Lead Vocals).wav")),

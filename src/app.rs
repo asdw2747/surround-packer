@@ -593,7 +593,6 @@ impl SurroundPackerApp {
 
         let load_events: Vec<LoadEvent> =
             std::iter::from_fn(|| self.load_rx.try_recv().ok()).collect();
-        let had_load_event = !load_events.is_empty();
         for event in load_events {
             match event {
                 LoadEvent::Loaded { stem, target } => {
@@ -619,25 +618,11 @@ impl SurroundPackerApp {
             }
         }
 
-        let mut applied_pending = false;
         if self.loading == 0 {
             if let Some(preset) = self.pending_preset.take() {
                 if !self.stems.is_empty() {
                     self.apply_preset(preset);
-                    applied_pending = true;
                 }
-            }
-        }
-
-        if had_load_event && !applied_pending && self.loading == 0 && !self.stems.is_empty() {
-            let refs: Vec<StemRef> = self
-                .stems
-                .iter()
-                .map(|stem| StemRef::new(stem.id, stem.path.clone()))
-                .collect();
-            if let Some(preset) = crate::auto_route::vocal_split_preset(&refs) {
-                self.apply_preset(preset);
-                self.push_log("Auto-routed UVR5 Vocal Split import.".to_string());
             }
         }
 

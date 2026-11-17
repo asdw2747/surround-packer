@@ -1,7 +1,6 @@
 pub mod app;
 pub mod audio;
 pub mod audition;
-pub mod auto_route;
 pub mod batch;
 pub mod decode;
 pub mod dsp;
