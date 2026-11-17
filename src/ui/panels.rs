@@ -211,13 +211,18 @@ pub fn show_left(app: &mut SurroundPackerApp, ui: &mut Ui) {
 
     ui.add_space(4.0);
     ui.label(
-        RichText::new("UVR5 PRESETS")
+        RichText::new("QUICK PRESETS")
             .strong()
             .size(10.0)
             .color(theme::MUTED),
     );
-    for preset in [Preset::VocalsDrumsFront, Preset::ClassicQuad] {
+    for preset in [
+        Preset::VocalSplit,
+        Preset::VocalsDrumsFront,
+        Preset::ClassicQuad,
+    ] {
         let label = match preset {
+            Preset::VocalSplit => "5-Stem Vocal Split\nLead / BGV / Drums / Bass / Other",
             Preset::VocalsDrumsFront => "Vocals + Drums Front\nInstruments Surround",
             Preset::ClassicQuad => "Classic Quad\n+ Center Vocal",
         };

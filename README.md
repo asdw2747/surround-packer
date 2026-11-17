@@ -25,8 +25,10 @@ Built in pure Rust with `eframe`/`egui`. Native 24-bit WAV and FLAC export need 
 - **Independent per-channel gain, mute, and solo** plus per-layer trim and mute.
 - **Per-speaker noise gate** for UVR5 stem bleed, with adjustable threshold (`-60` to `-15 dB`, default `-32 dB`) and release (`50` to `600 ms`, default `250 ms`), a fast 4 ms attack, and a 150 ms hold.
 - **UVR5 filename auto-routing presets**:
+  - *5-Stem Vocal Split* (Lead Vocals → FC, Background Vocals → SL/SR, Drums → FL/FR, Other → FL/FR + SL/SR, Bass → LFE)
   - *Vocals + Drums Front / Instruments Surround*
   - *Classic Quad + Center Vocal*
+- **Automatic Vocal Split detection** on import: a complete 5/6-stem UVR5 set applies the Vocal Split preset, ignoring a redundant combined `(Vocals)` file
 - **Routing templates** saved and loaded as human-readable `.json` files.
 - **LFE low-pass crossover** (80–120 Hz, default 100 Hz, 2nd-order Butterworth).
 - **Dual surround Haas delays** (0–35 ms):
@@ -127,7 +129,7 @@ cargo build --release
 The result is:
 
 ```text
-dist/SurroundPacker-1.0.1-x86_64.AppImage
+dist/SurroundPacker-1.0.2-x86_64.AppImage
 ```
 
 The AppImage bundles the executable, icon, desktop entry, license, and third-party notices. It requires the glibc version of the build host (2.43 or newer for the current CachyOS-built release); external media tools such as `ffmpeg`, `mplex`, `dvdauthor`, and an ISO tool remain system dependencies.
@@ -175,7 +177,7 @@ surround-packer --layout 7.1 --preset vocals-drums "Song_(Vocals).flac" "Song_(D
 surround-packer --tab dvd "Album Track 01.wav" "Album Track 02.flac"
 ```
 
-Preset names: `vocals-drums` / `front`, `quad` / `classic-quad`. Layouts: `5.1`, `7.1`. Tabs: `stem`, `dvd`.
+Preset names: `vocal-split` / `5-stem`, `vocals-drums` / `front`, `quad` / `classic-quad`. Layouts: `5.1`, `7.1`. Tabs: `stem`, `dvd`.
 
 ## Format details
 
@@ -199,7 +201,7 @@ WAVEFORMATEXTENSIBLE_CHANNEL_MASK=0x063F   # 7.1
 ARTIST=...
 TITLE=...
 ALBUM=...
-ENCODER=SurroundPacker 1.0.1
+ENCODER=SurroundPacker 1.0.2
 ```
 
 The mask comment is the standard FLAC convention for signaling the 5.1 speaker layout because FLAC's stream header has no channel-mask field.
@@ -279,7 +281,8 @@ The test suite covers:
 - Film/DTS 5.1 -> SMPTE source-order remapping
 - LFE low-pass attenuation above 120 Hz
 - the exact 720-sample (15 ms at 48 kHz) surround delay offset
-- UVR5 filename routing for `antonymph_(Vocals).flac` and `antonymph_(Drums).flac`
+- UVR5 filename routing for `antonymph_(Vocals).flac` and `antonymph_(Drums).flac`, including Lead/Background Vocal Split detection
+- five- and six-stem Vocal Split routing, FC gate defaults, and redundant combined-Vocals suppression
 - 7.1 presets: lead instruments -> SL/SR, pads/backing/strings -> BL/BR
 - stereo audition folddown, including BL/BR at `0.707`
 - Audio-DVD multi-track MPEG muxing and queue handling

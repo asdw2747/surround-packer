@@ -107,7 +107,7 @@ pub fn channel_color(channel: Channel) -> Color32 {
 
 pub fn kind_color(kind: &StemKind) -> Color32 {
     match kind {
-        StemKind::Vocals | StemKind::BackingVocals => VOCALS_COLOR,
+        StemKind::LeadVocals | StemKind::Vocals | StemKind::BackingVocals => VOCALS_COLOR,
         StemKind::Drums => DRUMS_COLOR,
         StemKind::Bass => BASS_COLOR,
         StemKind::Melodic | StemKind::Other => MELODIC_COLOR,

@@ -247,8 +247,9 @@ impl Slot {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StemKind {
+    LeadVocals,
     Vocals,
     BackingVocals,
     Drums,
@@ -263,6 +264,7 @@ pub enum StemKind {
 impl StemKind {
     pub const fn label(&self) -> &'static str {
         match self {
+            Self::LeadVocals => "Lead Vocals",
             Self::Vocals => "Vocals",
             Self::BackingVocals => "Backing Vocals",
             Self::Drums => "Drums",
@@ -297,7 +299,11 @@ pub fn classify_filename(name: &str) -> StemKind {
     let has = |candidates: &[&str]| tokens.iter().any(|token| candidates.contains(token));
 
     let has_vocals = has(&["vocals", "vocal", "vox", "voice", "voices", "acapella"]);
-    if has_vocals && has(&["backing", "bgv", "bgvs", "harmony", "harmonies", "choir"]) {
+    let has_backing = has(&["backing", "background", "bgv", "bgvs"]);
+    let has_harmony = has(&["harmony", "harmonies", "choir"]);
+    if has(&["leadvocal", "leadvocals"]) || (has_vocals && has(&["lead"])) {
+        StemKind::LeadVocals
+    } else if has_harmony || (has_vocals && has_backing) {
         StemKind::BackingVocals
     } else if has_vocals {
         StemKind::Vocals
@@ -369,6 +375,7 @@ impl StemRef {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Preset {
+    VocalSplit,
     VocalsDrumsFront,
     ClassicQuad,
 }
@@ -376,6 +383,7 @@ pub enum Preset {
 impl Preset {
     pub const fn label(self) -> &'static str {
         match self {
+            Self::VocalSplit => "5-Stem Vocal Split",
             Self::VocalsDrumsFront => "Vocals + Drums Front / Instruments Surround",
             Self::ClassicQuad => "Classic Quad + Center Vocal",
         }
@@ -454,7 +462,9 @@ pub fn apply_preset(
 ) -> [Slot; CHANNEL_COUNT] {
     let mut slots = Slot::empty_slots();
 
-    let vocals = first_of(stems, StemKind::Vocals);
+    let lead = first_of(stems, StemKind::LeadVocals);
+    let combined_vocals = first_of(stems, StemKind::Vocals);
+    let vocals = lead.or(combined_vocals);
     let backing = first_of(stems, StemKind::BackingVocals);
     let drums = first_of(stems, StemKind::Drums);
     let bass = first_of(stems, StemKind::Bass);
@@ -464,6 +474,30 @@ pub fn apply_preset(
     let unknown = first_of(stems, StemKind::Unknown);
 
     match preset {
+        Preset::VocalSplit => {
+            if let Some(vocals) = vocals {
+                add_route(&mut slots, Channel::Fc, vocals, ChannelMode::MonoSum, 0.0);
+                let slot = &mut slots[Channel::Fc.index()];
+                slot.gate_enabled = true;
+                slot.gate_threshold_db = GATE_DEFAULT_THRESHOLD_DB;
+                slot.gate_release_ms = GATE_DEFAULT_RELEASE_MS;
+            }
+            if let Some(backing) = backing {
+                add_surround(&mut slots, backing, 0.0);
+            }
+            if let Some(drums) = drums {
+                add_front(&mut slots, drums, 0.0);
+            }
+            let other = first_of(stems, StemKind::Other)
+                .or_else(|| first_of(stems, StemKind::Instrumental));
+            if let Some(other) = other {
+                add_front(&mut slots, other, 0.0);
+                add_surround(&mut slots, other, -4.5);
+            }
+            if let Some(bass) = bass {
+                add_route(&mut slots, Channel::Lfe, bass, ChannelMode::MonoSum, 0.0);
+            }
+        }
         Preset::VocalsDrumsFront => {
             if let Some(drums) = drums {
                 add_front(&mut slots, drums, 0.0);
@@ -693,8 +727,100 @@ mod tests {
             classify_filename("Song (Backing Vocals).flac"),
             StemKind::BackingVocals
         );
+        assert_eq!(
+            classify_filename("Song (Lead Vocals).flac"),
+            StemKind::LeadVocals
+        );
+        assert_eq!(
+            classify_filename("Song (lead_vocals).flac"),
+            StemKind::LeadVocals
+        );
+        assert_eq!(
+            classify_filename("Song (Background Vocals).flac"),
+            StemKind::BackingVocals
+        );
+        assert_eq!(
+            classify_filename("Song (backing_vocals).flac"),
+            StemKind::BackingVocals
+        );
+        assert_eq!(
+            classify_filename("Song (Harmony).flac"),
+            StemKind::BackingVocals
+        );
         assert_eq!(classify_filename("Song (Pad).flac"), StemKind::Ambient);
         assert_eq!(classify_filename("Song (Strings).flac"), StemKind::Ambient);
+    }
+
+    fn vocal_split_stems(include_combined: bool) -> Vec<StemRef> {
+        let mut stems = vec![
+            StemRef::new(1, "Song (Lead Vocals).flac"),
+            StemRef::new(2, "Song (Background Vocals).flac"),
+            StemRef::new(3, "Song (Drums).flac"),
+            StemRef::new(4, "Song (Bass).flac"),
+            StemRef::new(5, "Song (Other).flac"),
+        ];
+        if include_combined {
+            stems.push(StemRef::new(6, "Song (Vocals).flac"));
+        }
+        stems
+    }
+
+    fn route_gain(slot: &Slot, stem_id: u64) -> Option<f32> {
+        slot.routes
+            .iter()
+            .find(|route| route.stem_id == stem_id)
+            .map(|route| route.gain_db)
+    }
+
+    #[test]
+    fn vocal_split_preset_routes_lead_backing_drums_other_and_bass() {
+        for layout in [ChannelLayout::Surround51, ChannelLayout::Surround71] {
+            let slots = apply_preset(Preset::VocalSplit, &vocal_split_stems(false), layout);
+            let fc = &slots[Channel::Fc.index()];
+            assert_eq!(fc.routes.len(), 1);
+            assert_eq!(fc.routes[0].stem_id, 1);
+            assert!(fc.gate_enabled);
+            assert_eq!(fc.gate_threshold_db, GATE_DEFAULT_THRESHOLD_DB);
+            assert_eq!(fc.gate_release_ms, GATE_DEFAULT_RELEASE_MS);
+
+            for channel in [Channel::Sl, Channel::Sr] {
+                let slot = &slots[channel.index()];
+                assert_eq!(route_gain(slot, 2), Some(0.0));
+                assert_eq!(route_gain(slot, 5), Some(-4.5));
+            }
+            for channel in [Channel::Fl, Channel::Fr] {
+                let slot = &slots[channel.index()];
+                assert_eq!(route_gain(slot, 3), Some(0.0));
+                assert_eq!(route_gain(slot, 5), Some(0.0));
+            }
+            assert_eq!(route_gain(&slots[Channel::Lfe.index()], 4), Some(0.0));
+            assert!(slots[Channel::Bl.index()].is_empty());
+            assert!(slots[Channel::Br.index()].is_empty());
+        }
+    }
+
+    #[test]
+    fn vocal_split_preset_skips_combined_vocals_when_lead_exists() {
+        let slots = apply_preset(
+            Preset::VocalSplit,
+            &vocal_split_stems(true),
+            ChannelLayout::Surround51,
+        );
+        assert_eq!(
+            slots[Channel::Fc.index()]
+                .routes
+                .iter()
+                .map(|route| route.stem_id)
+                .collect::<Vec<_>>(),
+            vec![1]
+        );
+        for slot in &slots {
+            assert!(
+                slot.routes.iter().all(|route| route.stem_id != 6),
+                "combined Vocals stem was still routed in {}",
+                slot.channel.short()
+            );
+        }
     }
 
     #[test]

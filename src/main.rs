@@ -37,6 +37,9 @@ fn main() {
                     "vocals-drums" | "front" => {
                         Some(surround_packer::routing::Preset::VocalsDrumsFront)
                     }
+                    "vocal-split" | "5-stem" | "lead-vocals" => {
+                        Some(surround_packer::routing::Preset::VocalSplit)
+                    }
                     _ => None,
                 };
             }
